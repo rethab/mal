@@ -1,0 +1,3 @@
+#!/bin/bash
+
+exec idris --execute $(dirname $0)/${STEP:-stepA_mal} "${@}"
