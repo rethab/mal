@@ -64,8 +64,8 @@ haxe/*.n
 haxe/*.py
 haxe/cpp/
 haxe/*.js
-idris/*.ibc
-idris/*.idr~
+idris/**/*.ibc
+idris/**/*.idr~
 java/mal.jar
 java/target/
 java/dependency-reduced-pom.xml
