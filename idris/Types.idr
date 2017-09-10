@@ -5,9 +5,12 @@ mutual
 
   public export
   data MalType = MalList (List MalType)
-              | MalNumber Int
-              | MalSymbol String
-              | MalFunction Function
+               | MalNumber Int
+               | MalSymbol String
+               | MalString String
+               | MalNil
+               | MalBool Bool
+               | MalFunction Function
 
   public export
   Function : Type
