@@ -1,20 +1,25 @@
 module Types
 
-
 mutual
 
   public export
   data MalType = MalList (List MalType)
+               | MalVector (List MalType)
+               | MalMap (List (MapKey, MalType))
                | MalNumber Int
                | MalSymbol String
                | MalString String
                | MalNil
                | MalBool Bool
-               | MalFunction Function
+               | MalKeyword String
+               | MalFunction String Function
 
   public export
   Function : Type
   Function = List MalType -> Either String MalType
+
+  public export
+  data MapKey = StringKey String | KeywordKey String
 
 export
 data Env = MkEnv (List (String, MalType))
@@ -42,8 +47,8 @@ div _ = Left "/ must have two number params"
 export
 empty : Env
 empty = MkEnv [
-    ("+", MalFunction sum)
-  , ("-", MalFunction diff)
-  , ("*", MalFunction product)
-  , ("/", MalFunction div)
+    ("+", MalFunction "+" sum)
+  , ("-", MalFunction "-" diff)
+  , ("*", MalFunction "*" product)
+  , ("/", MalFunction "/" div)
 ]

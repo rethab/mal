@@ -8,6 +8,9 @@ import public Lightyear.Strings
 
 -- Based on: https://github.com/ziman/lightyear/blob/0bd3890646d9da88f92873fd860f88368e1fba0d/examples/Json.idr
 
+specialChars : String
+specialChars = " []{}()'`~^@"
+
 specialChar : Parser Char
 specialChar = do
   c <- anyChar
@@ -23,16 +26,17 @@ commas = skip (many (char ',')) <?> "comma"
 ignores : Parser ()
 ignores = spaces <|> commas
 
-malNumber : Parser Int
-malNumber = integer <* commas <?> "Number" 
+malNumber : Parser MalType
+malNumber = MalNumber <$> (integer <* commas <?> "Number")
 
-malNil : Parser String
-malNil = string "nil" <?> "nil"
+malNil : Parser MalType
+malNil = (\_ => MalNil) <$> (string "nil" <?> "nil")
 
-malBool : Parser Bool
-malBool = ((\_ => True)  <$> string "true")
-      <|> ((\_ => False) <$> string "false")
-      <?> "Bool"
+malBool : Parser MalType
+malBool = MalBool <$>
+      (((\_ => True) <$> string "true")
+  <|> ((\_ => False) <$> string "false")
+  <?> "Bool")
 
 malString' : Parser (List Char)
 malString' = (char '"' *!> pure Prelude.List.Nil) <|> do
@@ -45,30 +49,51 @@ malString : Parser String
 malString = char '"' *!> map pack malString' <?> "String"
 
 
-malSymbol : Parser String
-malSymbol =
-  map pack (some $ noneOf " []{}()'`~^@")
-  <?> "Symbol"
+malSymbol : Parser MalType
+malSymbol = MalSymbol <$>
+  (map pack (some $ noneOf specialChars) <?> "Symbol")
+
+malKeyword : Parser String
+malKeyword = 
+  char ':' *!> map pack (some $ noneOf specialChars) <?> "Keyword"
 
 mutual 
 
-
-
   -- the ! makes it commit to this branch
-  malList : Parser (List MalType)
-  malList =
+  malList : Parser MalType
+  malList = MalList <$> (
     char '(' *!> (malType `sepBy` (char ' ')) <* ignores <* char ')'
-    <?> "List"
+    <?> "List")
 
+  malVector : Parser MalType
+  malVector = MalVector <$> (
+    char '[' *!> (malType `sepBy` (char ' ')) <* ignores <* char ']'
+    <?> "Vector")
+
+  malMap' : Parser (MapKey, MalType)
+  malMap' = do _ <- spaces
+               key <- (KeywordKey <$> malKeyword) <|>
+                      (StringKey <$> malString)
+               _ <- spaces
+               val <- malType
+               pure (key, val)
+
+  malMap : Parser MalType
+  malMap = MalMap <$>
+    (char '{' *!> (malMap' `sepBy` (char ' ')) <* ignores <* char '}'
+    <?> "HashMap")
 
   malType : Parser MalType
   malType = ignores
-        *>  (map MalNumber malNumber)
-       <|>  ((\_ => MalNil) <$> malNil)
-       <|>  (map MalBool malBool)
-       <|>  (map MalString malString)
-       <|>| (map MalList malList) -- recursive definitions must be lazy
-       <|>  (map MalSymbol malSymbol) 
+        *>  malNumber
+       <|>  (MalKeyword <$> malKeyword)
+       <|>  malNil
+       <|>  malBool
+       <|>  (MalString <$> malString)
+       <|>| malList -- recursive definitions must be lazy
+       <|>| malVector
+       <|>| malMap
+       <|>  malSymbol 
 
 export
 read_str : String -> Either String MalType
